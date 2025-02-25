@@ -1,10 +1,8 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS, cross_origin
 import pickle
 import numpy as np
 
 app = Flask(__name__)
-cors = CORS(app)
 
 # Load Model
 MODEL_PATH = 'model/best_xgb_acc.pkl'
