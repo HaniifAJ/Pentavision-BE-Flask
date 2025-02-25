@@ -23,9 +23,8 @@ COPY . .
 # Expose the Flask default port
 EXPOSE 5000
 
-# Set environment variables (configured via Docker Compose)
-# ENV FLASK_APP=app.py
-# ENV FLASK_ENV=production
+# Set default environment variables (overridden by -e in docker run)
+ENV DATABASE_URL=postgresql+psycopg2://pentavision:pentavision@localhost:5432/pentavision
 
 # Use Gunicorn as the WSGI server
 CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
