@@ -5,3 +5,5 @@ README.md
 .vscode
 .env
 test.py
+scaler/less_acc
+result.csv

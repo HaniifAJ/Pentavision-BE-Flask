@@ -7,6 +7,9 @@ from flask_marshmallow import Marshmallow
 from marshmallow import Schema, fields, ValidationError, validate
 import os
 from dotenv import load_dotenv
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
+from sklearn.metrics import accuracy_score
 
 load_dotenv()
 
@@ -24,7 +27,8 @@ db = SQLAlchemy(app)
 ma = Marshmallow(app)
 
 # Load Model
-MODEL_PATH = 'model/best_xgb_acc.pkl'
+# MODEL_PATH = 'model/best_xgb_acc.pkl'
+MODEL_PATH = 'model/best_rf_model.pkl'
 with open(MODEL_PATH, 'rb') as file:
     model = pickle.load(file)
 
@@ -48,9 +52,12 @@ class CreditApplication(db.Model):
     present_employment = db.Column(db.Integer, nullable=False)
     property = db.Column(db.Integer, nullable=False)
     purpose = db.Column(db.Integer, nullable=False)
-    saving_accounts = db.Column(db.Integer, nullable=False)
+    
+    salary = db.Column(db.Integer, nullable=False)
+    # saving_accounts = db.Column(db.Integer, nullable=False)
+    
     age = db.Column(db.Integer, nullable=False)
-    dependants = db.Column(db.Integer, nullable=False)
+    # dependants = db.Column(db.Integer, nullable=False)
     credit_history = db.Column(db.Integer, nullable=False)
     duration = db.Column(db.Integer, nullable=False)
     existing_acc = db.Column(db.Integer, nullable=False)
@@ -65,9 +72,12 @@ class CreditApplicationSchema(ma.Schema):
     present_employment = fields.Integer(strict=True, required=True, validate=validate.Range(0, 4, error="Value must be between 0 and 4"))
     property = fields.Integer(strict=True, required=True, validate=validate.Range(0, 3, error="Value must be between 0 and 3"))
     purpose = fields.Integer(strict=True, required=True, validate=validate.Range(0, 3, error="Value must be between 0 and 3"))
-    saving_accounts = fields.Integer(strict=True, required=True, validate=validate.Range(0, 4, error="Value must be between 0 and 4"))
+
+    salary = fields.Integer(required=True, validate=validate.Range(0, 3, error="Value must be between 0 and 3"))
+    # saving_accounts = fields.Integer(strict=True, required=True, validate=validate.Range(0, 4, error="Value must be between 0 and 4"))
+    
     age = fields.Integer(strict=True, required=True, validate=validate.Range(1, 100, error="Value must be between 1 and 100"))
-    dependants = fields.Integer(strict=True, required=True, validate=validate.Range(0, 100, error="Value must be between 0 and 100"))
+    # dependants = fields.Integer(strict=True, required=True, validate=validate.Range(0, 100, error="Value must be between 0 and 100"))
     credit_history = fields.Integer(strict=True, required=True, validate=validate.Range(0, 4, error="Value must be between 0 and 4"))
     duration = fields.Integer(strict=True, required=True, validate=validate.OneOf([6,12,24,36]))  # Months
     existing_acc = fields.Integer(strict=True, required=True, validate=validate.Range(0, 3, error="Value must be between 0 and 3"))
@@ -78,6 +88,21 @@ credit_schema = CreditApplicationSchema()
 def calculate(credit_amount, tenor):
     calc_result = (credit_amount + margins[str(tenor)]*credit_amount) / tenor
     return calc_result
+
+df = pd.read_csv('scaler/scaler_new.csv')
+label = df['credit'].values
+df = df[['credit_hist', 'present_employment', 'property', 'purpose', 'status_existing_account', 'salary', 'age', 'credit_amount', 'duration']]
+scaler = StandardScaler()
+# print(df.values[0])
+scaler.fit(df)
+df = scaler.transform(df)
+# print(scaled_values[0])
+
+result = model.predict(df)
+print(accuracy_score(label, np.int16(result)))
+result_df = pd.DataFrame(result, columns=['result'])
+result_df.to_csv('result.csv', index=False)
+
 
 
 @app.route('/api/v1/predict', methods=['POST'])
@@ -93,9 +118,12 @@ def predict():
         present_employment = new_application.present_employment
         property = new_application.property
         purpose = new_application.purpose
-        saving_accounts = new_application.saving_accounts
+
+        salary = new_application.salary
+        # saving_accounts = new_application.saving_accounts
+
         age = new_application.age
-        dependants = new_application.dependants
+        # dependants = new_application.dependants
         credit_history = new_application.credit_history
         duration = new_application.duration
         existing_acc = new_application.existing_acc
@@ -116,12 +144,22 @@ def predict():
         # existing_acc = int(feature_input.get('existing_acc', 0))
 
         # Pastikan input dalam bentuk numpy array
-        features = np.array([[credit_amount, present_employment, property, purpose, 
-                              saving_accounts, age, dependants, credit_history, 
-                              duration, existing_acc]])
+        # 'credit_hist', 'present_employment', 'property', 'purpose', 'status_existing_account', 'salary', 'age', 'credit_amount', 'duration'
+        features = np.array([[credit_history, present_employment, property, purpose, 
+                              existing_acc, salary, age, credit_amount, duration]])
+        # features = np.array([[credit_history, present_employment, credit_amount, 
+        #                       property, purpose, salary, duration, age, existing_acc]])
+
+        # Scaling features
+        scaled_features = scaler.transform(features)
+        print(features)
+        print(scaled_features)
+
+        features_df = pd.DataFrame(scaled_features, columns=['credit_hist', 'present_employment', 'property', 'purpose', 'status_existing_account', 'salary', 'age', 'credit_amount', 'duration'])
         
         # Prediksi model
-        prediction = model.predict(features)
+        prediction = model.predict(features_df)
+        prediction[0] = int(prediction[0])
         output = "APPROVED" if prediction[0] == 1 else "REJECTED"  # Perbaikan label output
 
         new_application.result = prediction[0] == 1
@@ -148,9 +186,8 @@ def predict():
                     "Present Employment": present_employment,
                     "Property": property,
                     "Purpose": purpose,
-                    "Saving Accounts": saving_accounts,
+                    "Salary": salary,
                     "Age": age,
-                    "Dependants": dependants,
                     "Credit History": credit_history,
                     "Duration": duration,
                     "Existing Account": existing_acc,
@@ -168,9 +205,8 @@ def predict():
                 "Present Employment": present_employment,
                 "Property": property,
                 "Purpose": purpose,
-                "Saving Accounts": saving_accounts,
+                "Salary": salary,
                 "Age": age,
-                "Dependants": dependants,
                 "Credit History": credit_history,
                 "Duration": duration,
                 "Existing Account": existing_acc,
