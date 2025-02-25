@@ -3,6 +3,9 @@ FROM python:3.11 AS builder
 
 WORKDIR /app
 
+# Install system dependencies (libpq required for psycopg2)
+RUN apt-get update && apt-get install -y libpq-dev gcc
+
 # Copy only requirements to leverage Docker caching
 COPY requirement.txt ./
 
@@ -14,6 +17,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install only necessary system dependencies in production
+RUN apt-get update && apt-get install -y libpq-dev
+
 # Copy installed dependencies from the builder stage
 COPY --from=builder /install /usr/local
 
@@ -22,9 +28,6 @@ COPY . .
 
 # Expose the Flask default port
 EXPOSE 5000
-
-# Set default environment variables (overridden by -e in docker run)
-ENV DATABASE_URL=postgresql+psycopg2://pentavision:pentavision@localhost:5432/pentavision
 
 # Use Gunicorn as the WSGI server
 CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
