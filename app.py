@@ -11,6 +11,25 @@ MODEL_PATH = 'model/best_xgb_acc.pkl'
 with open(MODEL_PATH, 'rb') as file:
     model = pickle.load(file)
 
+margins = {
+    "6": 0.07,
+    "12": 0.08,
+    "24": 0.09,
+    "36": 0.10
+}
+
+tenors = [
+    6,
+    12,
+    24,
+    36
+]
+
+def calculate(credit_amount, tenor):
+    calc_result = (credit_amount + margins[str(tenor)]*credit_amount) / tenor
+    return calc_result
+
+
 @app.route('/api/v1/predict', methods=['POST'])
 def predict():
     try:
@@ -35,6 +54,36 @@ def predict():
         # Prediksi model
         prediction = model.predict(features)
         output = "APPROVED" if prediction[0] == 1 else "REJECTED"  # Perbaikan label output
+
+        if(prediction[0] == 1):
+            result = []
+            for tenor in tenors:
+                calc_result = calculate(credit_amount, tenor)
+                result.append({
+                    "tenor": tenor,
+                    "margin": margins[str(tenor)],
+                    "installment": calc_result
+                })
+            
+            return jsonify({
+                "message": "Prediction Success",
+                "prediction_text": output,
+                "input_data": {
+                    "Credit Amount": credit_amount,
+                    "Present Employment": present_employment,
+                    "Property": property,
+                    "Purpose": purpose,
+                    "Saving Accounts": saving_accounts,
+                    "Age": age,
+                    "Dependants": dependants,
+                    "Credit History": credit_history,
+                    "Duration": duration,
+                    "Existing Account": existing_acc,
+                },
+                "calc_result": result
+            })
+
+            
 
         return jsonify({
             "message": "Prediction Success",
