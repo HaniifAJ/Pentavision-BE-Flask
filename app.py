@@ -33,17 +33,39 @@ with open(MODEL_PATH, 'rb') as file:
     model = pickle.load(file)
 
 margins = {
-    "6": 0.07,
-    "12": 0.08,
-    "24": 0.09,
-    "36": 0.10
+    "12": {
+        "1": 6.62,
+        "2": 5.78,
+        "3": 8.75,
+    },
+    "24": {
+        "1": 6.77,
+        "2": 5.65,
+        "3": 8.75,
+    },
+    "36": {
+        "1": 7.10,
+        "2": 5.67,
+        "3": 8.75,
+    },
+    "48": {
+        "1": 7.34,
+        "2": 5.73,
+        "3": 8.75,
+    },
+    "60": {
+        "1": 7.61,
+        "2": 5.79,
+        "3": 8.75,
+    },
 }
 
 tenors = [
-    6,
     12,
     24,
-    36
+    36,
+    48,
+    60
 ]
 
 class CreditApplication(db.Model):
@@ -80,7 +102,7 @@ class CreditApplicationSchema(ma.Schema):
     age = fields.Integer(strict=True, required=True, validate=validate.Range(1, 100, error="Value must be between 1 and 100"))
     # dependants = fields.Integer(strict=True, required=True, validate=validate.Range(0, 100, error="Value must be between 0 and 100"))
     credit_history = fields.Integer(strict=True, required=True, validate=validate.Range(0, 4, error="Value must be between 0 and 4"))
-    duration = fields.Integer(strict=True, required=True, validate=validate.OneOf([6,12,24,36]))  # Months
+    duration = fields.Integer(strict=True, required=True, validate=validate.OneOf(tenors))  # Months
     existing_acc = fields.Integer(strict=True, required=True, validate=validate.Range(0, 3, error="Value must be between 0 and 3"))
     result = fields.Boolean(strict=True, required=False)
 
@@ -91,8 +113,8 @@ class InputDataSchema(ma.Schema):
 credit_schema = CreditApplicationSchema()
 input_schema = InputDataSchema()
 
-def calculate(credit_amount, tenor):
-    calc_result = (credit_amount + margins[str(tenor)]*credit_amount) / tenor
+def calculate(credit_amount, tenor, purpose):
+    calc_result = (credit_amount + margins[str(tenor)][str(purpose)]*tenor/12.*credit_amount)/(tenor)
     return calc_result
 
 df = pd.read_csv('scaler/train_data.csv')
@@ -170,20 +192,20 @@ def predict():
         output = "APPROVED" if prediction[0] == 1 else "REJECTED"  # Perbaikan label output
 
         new_application.result = prediction[0] == 1
-        print('tes')
+        # print('tes')
         if data['save'] == 1:
             db.session.add(new_application)
             db.session.commit()
-            print("Data saved")
+            # print("Data saved")
 
 
         if(prediction[0] == 1):
             result = []
             for tenor in tenors:
-                calc_result = calculate(credit_amount, tenor)
+                calc_result = calculate(credit_amount, tenor, purpose)
                 result.append({
                     "tenor": tenor,
-                    "margin": margins[str(tenor)],
+                    "margin": margins[str(tenor)][str(purpose)],
                     "installment": calc_result
                 })
             

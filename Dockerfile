@@ -1,32 +1,34 @@
-# Stage 1: Build environment
-FROM python:3.11 AS builder
+# Stage 1: Build dependencies
+FROM python:3.13-alpine AS builder
 
 WORKDIR /app
 
-# Install system dependencies (libpq required for psycopg2)
-RUN apt-get update && apt-get install -y libpq-dev gcc
+# Update Alpine packages & install build dependencies
+RUN apk update && apk upgrade && \
+    apk add --no-cache gcc musl-dev libffi-dev postgresql-dev expat-dev
 
-# Copy only requirements to leverage Docker caching
-COPY requirement.txt ./
+# Copy only requirements for caching
+COPY requirement.txt .
 
-# Install dependencies in a temporary directory
+# Install Python dependencies in a temporary directory
 RUN pip install --no-cache-dir --prefix=/install -r requirement.txt
 
-# Stage 2: Production-ready image
-FROM python:3.11-slim
+# Stage 2: Production image
+FROM python:3.13-alpine
 
 WORKDIR /app
 
-# Install only necessary system dependencies in production
-RUN apt-get update && apt-get install -y libpq-dev
+# Update system packages & install minimal runtime dependencies
+RUN apk update && apk upgrade && \
+    apk add --no-cache libpq expat
 
-# Copy installed dependencies from the builder stage
+# Copy installed dependencies from builder stage
 COPY --from=builder /install /usr/local
 
-# Copy application files
+# Copy the application code
 COPY . .
 
-# Expose the Flask default port
+# Expose Flask's default port
 EXPOSE 5000
 
 # Use Gunicorn as the WSGI server
