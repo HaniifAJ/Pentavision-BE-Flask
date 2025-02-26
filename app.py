@@ -20,7 +20,7 @@ cors = CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql+psycopg2://user:password@localhost/dbname')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-print(app.config['SQLALCHEMY_DATABASE_URI'])
+# print(app.config['SQLALCHEMY_DATABASE_URI'])
 
 # Initialize Database & Marshmallow
 db = SQLAlchemy(app)
@@ -89,19 +89,19 @@ def calculate(credit_amount, tenor):
     calc_result = (credit_amount + margins[str(tenor)]*credit_amount) / tenor
     return calc_result
 
-df = pd.read_csv('scaler/scaler_new.csv')
-label = df['credit'].values
+df = pd.read_csv('scaler/train_data.csv')
+# label = df['credit'].values
 df = df[['credit_hist', 'present_employment', 'property', 'purpose', 'status_existing_account', 'salary', 'age', 'credit_amount', 'duration']]
 scaler = StandardScaler()
 # print(df.values[0])
 scaler.fit(df)
-df = scaler.transform(df)
+# df = scaler.transform(df)
 # print(scaled_values[0])
 
-result = model.predict(df)
-print(accuracy_score(label, np.int16(result)))
-result_df = pd.DataFrame(result, columns=['result'])
-result_df.to_csv('result.csv', index=False)
+# result = model.predict(df)
+# print(accuracy_score(label, np.int16(result)))
+# result_df = pd.DataFrame(result, columns=['result'])
+# result_df.to_csv('result.csv', index=False)
 
 
 
@@ -152,8 +152,8 @@ def predict():
 
         # Scaling features
         scaled_features = scaler.transform(features)
-        print(features)
-        print(scaled_features)
+        # print(features)
+        # print(scaled_features)
 
         features_df = pd.DataFrame(scaled_features, columns=['credit_hist', 'present_employment', 'property', 'purpose', 'status_existing_account', 'salary', 'age', 'credit_amount', 'duration'])
         
