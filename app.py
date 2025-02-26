@@ -94,7 +94,7 @@ class CreditApplicationSchema(ma.Schema):
     credit_amount = fields.Integer(required=True, validate=lambda x: 1 <= x <= 100_000_000_000)
     present_employment = fields.Integer(strict=True, required=True, validate=validate.Range(0, 4, error="Value must be between 0 and 4"))
     property = fields.Integer(strict=True, required=True, validate=validate.Range(0, 3, error="Value must be between 0 and 3"))
-    purpose = fields.Integer(strict=True, required=True, validate=validate.Range(0, 3, error="Value must be between 0 and 3"))
+    purpose = fields.Integer(strict=True, required=True, validate=validate.Range(1, 3, error="Value must be between 1 and 3"))
 
     salary = fields.Integer(required=True, validate=validate.Range(0, 3, error="Value must be between 0 and 3"))
     # saving_accounts = fields.Integer(strict=True, required=True, validate=validate.Range(0, 4, error="Value must be between 0 and 4"))
