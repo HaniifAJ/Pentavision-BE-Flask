@@ -62,6 +62,7 @@ class CreditApplication(db.Model):
     duration = db.Column(db.Integer, nullable=False)
     existing_acc = db.Column(db.Integer, nullable=False)
     result = db.Column(db.Boolean, nullable=True)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
 
 with app.app_context():
     db.create_all()
@@ -83,7 +84,12 @@ class CreditApplicationSchema(ma.Schema):
     existing_acc = fields.Integer(strict=True, required=True, validate=validate.Range(0, 3, error="Value must be between 0 and 3"))
     result = fields.Boolean(strict=True, required=False)
 
+class InputDataSchema(ma.Schema):
+    data = fields.Nested(CreditApplicationSchema, required=True)
+    save = fields.Integer(required=True, validate=validate.OneOf([0, 1], error="Value must be 0 or 1")) # 0: No, 1: Yes
+
 credit_schema = CreditApplicationSchema()
+input_schema = InputDataSchema()
 
 def calculate(credit_amount, tenor):
     calc_result = (credit_amount + margins[str(tenor)]*credit_amount) / tenor
@@ -108,8 +114,9 @@ scaler.fit(df)
 @app.route('/api/v1/predict', methods=['POST'])
 def predict():
     try:
-        data = request.get_json()
-        validated_data = credit_schema.load(data)
+        data = input_schema.load(request.get_json())
+        # print(data)
+        validated_data = credit_schema.load(data['data'])
 
         # Create new CreditApplication instance
         new_application = CreditApplication(**validated_data)
@@ -163,9 +170,11 @@ def predict():
         output = "APPROVED" if prediction[0] == 1 else "REJECTED"  # Perbaikan label output
 
         new_application.result = prediction[0] == 1
-
-        db.session.add(new_application)
-        db.session.commit()
+        print('tes')
+        if data['save'] == 1:
+            db.session.add(new_application)
+            db.session.commit()
+            print("Data saved")
 
 
         if(prediction[0] == 1):
