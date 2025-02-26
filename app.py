@@ -114,7 +114,7 @@ credit_schema = CreditApplicationSchema()
 input_schema = InputDataSchema()
 
 def calculate(credit_amount, tenor, purpose):
-    calc_result = (credit_amount + margins[str(tenor)][str(purpose)]*tenor/12.*credit_amount)/(tenor)
+    calc_result = (credit_amount + margins[str(tenor)][str(purpose)]*tenor/12.*credit_amount/100)/(tenor)
     return calc_result
 
 df = pd.read_csv('scaler/train_data.csv')
