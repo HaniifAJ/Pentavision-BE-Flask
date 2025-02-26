@@ -3,9 +3,9 @@ FROM python:3.13-alpine AS builder
 
 WORKDIR /app
 
-# Update Alpine packages & install build dependencies
+# Update Alpine packages & install required build tools
 RUN apk update && apk upgrade && \
-    apk add --no-cache gcc musl-dev libffi-dev postgresql-dev expat-dev
+    apk add --no-cache gcc g++ musl-dev libffi-dev postgresql-dev py3-numpy py3-scipy expat-dev
 
 # Copy only requirements for caching
 COPY requirement.txt .
@@ -18,9 +18,9 @@ FROM python:3.13-alpine
 
 WORKDIR /app
 
-# Update system packages & install minimal runtime dependencies
+# Install minimal runtime dependencies
 RUN apk update && apk upgrade && \
-    apk add --no-cache libpq expat
+    apk add --no-cache libpq expat libgomp libstdc++
 
 # Copy installed dependencies from builder stage
 COPY --from=builder /install /usr/local
